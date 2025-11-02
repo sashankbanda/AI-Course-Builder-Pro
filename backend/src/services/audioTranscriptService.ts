@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import ffmpeg from "fluent-ffmpeg";
 import OpenAI from "openai";
 
@@ -17,8 +17,11 @@ export const getAudioTranscript = async (videoUrl: string): Promise<string | nul
 
     // Step 1: Download YouTube audio
     await new Promise((resolve, reject) => {
-      const stream = ytdl(videoUrl, { filter: "audioonly", quality: "highestaudio" })
-        .pipe(fs.createWriteStream(audioPath));
+      const stream = ytdl(videoUrl, { 
+        filter: "audioonly", 
+        quality: "highestaudio" 
+      }).pipe(fs.createWriteStream(audioPath));
+      
       stream.on("finish", resolve);
       stream.on("error", reject);
     });

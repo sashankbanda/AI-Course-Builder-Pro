@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -20,7 +20,11 @@ export async function transcribeFromYouTube(videoId: string): Promise<string | n
 
     // 1. Download audio only
     await new Promise<void>((resolve, reject) => {
-      const stream = ytdl(videoUrl, { filter: "audioonly", quality: "highestaudio" });
+      const stream = ytdl(videoUrl, { 
+        filter: "audioonly", 
+        quality: "highestaudio" 
+      });
+      
       ffmpeg(stream)
         .audioBitrate(128)
         .save(audioPath)
