@@ -1,18 +1,28 @@
-import { transcribeFromYouTube } from "./whisperService";
 import { YoutubeTranscript } from "youtube-transcript";
+import { transcribeAudioWithWhisper } from "./whisperService";
 
+/**
+ * Get transcript from YouTube video
+ * First tries to get captions/subtitles from YouTube
+ * If that fails, downloads audio and transcribes with Whisper AI
+ */
 export async function getTranscript(videoId: string): Promise<string | null> {
   try {
-    // Try getting YouTube's built-in captions first
+    console.log(`  → Attempting to fetch YouTube captions...`);
+    
+    // Try to get YouTube's built-in captions/subtitles
     const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
+    
     if (transcriptData && transcriptData.length > 0) {
-      return transcriptData.map((t: any) => t.text).join(" ");
+      const fullTranscript = transcriptData.map((t: any) => t.text).join(" ");
+      console.log(`  ✓ YouTube captions found (${fullTranscript.length} characters)`);
+      return fullTranscript;
     }
-  } catch (error) {
-    console.warn(`No transcript found for video ID: ${videoId}`);
+  } catch (error: any) {
+    console.log(`  ✗ No YouTube captions available: ${error.message}`);
   }
 
-  // Fallback to Whisper audio transcription
-  console.log("Trying Whisper audio transcription...");
-  return await transcribeFromYouTube(videoId);
+  // Fallback: Use Whisper AI to transcribe audio
+  console.log(`  → Falling back to Whisper AI audio transcription...`);
+  return await transcribeAudioWithWhisper(videoId);
 }

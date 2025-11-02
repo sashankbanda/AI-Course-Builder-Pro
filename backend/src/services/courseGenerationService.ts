@@ -1,103 +1,130 @@
 import { generateSubtopics, summarizeTranscript, generateQuiz } from './geminiService';
 import { searchYouTubeVideos } from './youtubeService';
 import { getTranscript } from './transcriptService';
-import { getAudioTranscript } from './audioTranscriptService';
 import CourseModel from '../models/Course';
 import { Course, Lesson } from '../types';
 
+/**
+ * YOUR ORIGINAL VISION:
+ * 1. User enters topic
+ * 2. Find best YouTube videos
+ * 3. Extract transcript (captions OR Whisper AI)
+ * 4. Generate notes in English using Gemini
+ * 5. Create quiz
+ */
 export const generateFullCourse = async (topic: string): Promise<Course> => {
+    // Check cache
     const existingCourse = await CourseModel.findOne({ topic: new RegExp(`^${topic}$`, 'i') });
     if (existingCourse) {
-        console.log(`Course for topic "${topic}" found in cache. Returning from DB.`);
+        console.log(`✓ Course "${topic}" found in database cache`);
         return existingCourse.toObject();
     }
 
-    console.log(`[1/5] Generating subtopics for: ${topic}`);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`🎓 GENERATING COURSE: ${topic}`);
+    console.log(`${'='.repeat(60)}\n`);
+
+    // Step 1: Generate subtopics using AI
+    console.log(`[1/5] 🤖 Generating subtopics with Gemini AI...`);
     const subtopics = await generateSubtopics(topic);
-    console.log(`> Found subtopics: ${subtopics.join(', ')}`);
+    console.log(`✓ Generated ${subtopics.length} subtopics:`);
+    subtopics.forEach((st, i) => console.log(`  ${i + 1}. ${st}`));
+    console.log();
 
     const lessons: Omit<Lesson, '_id'>[] = [];
-    let processedCount = 0;
 
+    // Step 2-4: Process each subtopic
     for (const [index, subtopic] of subtopics.entries()) {
         try {
-            console.log(`\n[${index + 2}/5] Processing subtopic: ${subtopic}`);
+            console.log(`[${index + 2}/${subtopics.length + 1}] 📚 Processing: "${subtopic}"`);
 
-            console.log(`  -> Searching for videos on YouTube...`);
+            // Find best YouTube video
+            console.log(`  🔍 Searching for best YouTube video...`);
             const video = await searchYouTubeVideos(subtopic);
+            
             if (!video) {
-                console.warn(`  -> No suitable video found for "${subtopic}". Skipping lesson.`);
+                console.log(`  ⚠️  No video found, skipping...\n`);
                 continue;
             }
-            console.log(`  -> Found video: ${video.title} (ID: ${video.id})`);
+            
+            console.log(`  ✓ Found: "${video.title}"`);
+            console.log(`    Video ID: ${video.id}`);
 
-            console.log(`  -> Fetching transcript...`);
-            let transcript = await getTranscript(video.id);
+            // Extract transcript (YouTube captions OR Whisper AI)
+            console.log(`  📝 Extracting transcript...`);
+            const transcript = await getTranscript(video.id);
 
-            // Fallback to audio transcription if YouTube captions fail
-            if (!transcript) {
-                console.warn(`  -> No transcript found. Trying Whisper audio transcription...`);
-                try {
-                    transcript = await getAudioTranscript(`https://www.youtube.com/watch?v=${video.id}`);
-                } catch (audioError) {
-                    console.error(`  -> Audio transcription failed:`, audioError);
-                }
-            }
-
-            if (!transcript) {
-                console.warn(`  -> Could not generate transcript for video ID ${video.id}. Skipping lesson.`);
+            if (!transcript || transcript.length < 100) {
+                console.log(`  ⚠️  Transcript unavailable or too short, skipping...\n`);
                 continue;
             }
 
-            console.log(`  -> Transcript ready (${transcript.length} characters).`);
+            console.log(`  ✓ Transcript extracted (${transcript.length} characters)`);
 
-            console.log(`  -> Summarizing transcript into lesson notes...`);
+            // Generate notes in English using Gemini
+            console.log(`  🤖 Generating lesson notes with Gemini AI...`);
             const notes = await summarizeTranscript(transcript, subtopic);
-            console.log(`  -> Notes generated.`);
+            console.log(`  ✓ Notes generated in English`);
 
-            console.log(`  -> Generating quiz...`);
-            const quiz = await generateQuiz(notes);
-            console.log(`  -> Quiz generated.`);
+            // Create quiz
+            console.log(`  ❓ Creating quiz questions...`);
+            const quiz = await generateQuiz(notes, 2);
+            console.log(`  ✓ Quiz created (${quiz.length} questions)\n`);
 
+            // Add lesson
             lessons.push({
                 title: subtopic,
                 videoUrl: `https://www.youtube.com/embed/${video.id}`,
                 notes,
                 quiz,
             });
-            
-            processedCount++;
-            
-            // Stop after 3-5 successful lessons to avoid API limits
-            if (processedCount >= 5) {
-                console.log(`  -> Reached maximum of 5 lessons. Stopping.`);
-                break;
-            }
+
+            console.log(`  ✅ Lesson "${subtopic}" completed!\n`);
+
         } catch (error: any) {
-            console.error(`Failed to process subtopic "${subtopic}":`, error.message);
-            // Continue with next subtopic
+            console.log(`  ❌ Error processing "${subtopic}": ${error.message}\n`);
         }
     }
 
+    // Validate we have at least one lesson
     if (lessons.length === 0) {
-        throw new Error('Could not generate any lessons for the given topic. Please try a different topic or check your API keys.');
+        throw new Error(
+            '❌ Could not generate any lessons.\n\n' +
+            'Possible reasons:\n' +
+            '• Videos don\'t have captions and Whisper transcription failed\n' +
+            '• YouTube API quota exceeded\n' +
+            '• OpenAI API key invalid or quota exceeded\n' +
+            '• Network issues\n\n' +
+            'Solutions:\n' +
+            '1. Check your API keys in backend/.env\n' +
+            '2. Try a different topic\n' +
+            '3. Wait a few minutes and try again'
+        );
     }
 
-    console.log(`\n[5/5] Generating final quiz...`);
-    const finalQuizNotes = lessons.map(l => l.notes).join('\n\n---\n\n');
-    const finalQuiz = await generateQuiz(finalQuizNotes, 5);
-    console.log(`> Course generation complete! Generated ${lessons.length} lessons.`);
+    // Step 5: Generate final quiz
+    console.log(`[5/5] 🎯 Creating final course quiz...`);
+    const allNotes = lessons.map(l => l.notes).join('\n\n---\n\n');
+    const finalQuiz = await generateQuiz(allNotes, 5);
+    console.log(`✓ Final quiz created (${finalQuiz.length} questions)\n`);
 
+    // Save to database
     const courseData = {
         topic: topic,
-        title: `${topic} Masterclass`,
+        title: `${topic} - Complete Course`,
         lessons,
         finalQuiz,
     };
 
     const newCourse = new CourseModel(courseData);
     await newCourse.save();
-    console.log(`New course for "${topic}" saved to the database.`);
+
+    console.log(`${'='.repeat(60)}`);
+    console.log(`✅ COURSE GENERATED SUCCESSFULLY!`);
+    console.log(`   Topic: ${topic}`);
+    console.log(`   Lessons: ${lessons.length}`);
+    console.log(`   Total Quiz Questions: ${finalQuiz.length}`);
+    console.log(`${'='.repeat(60)}\n`);
 
     return newCourse.toObject();
 };

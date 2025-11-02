@@ -12,6 +12,9 @@ interface YouTubeVideo {
     title: string;
 }
 
+/**
+ * Search for the best educational video on YouTube for a given topic
+ */
 export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo | null> => {
     try {
         const response = await axios.get(YOUTUBE_API_URL, {
@@ -22,6 +25,8 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo |
                 videoDefinition: 'high',
                 maxResults: 1,
                 key: YOUTUBE_API_KEY,
+                relevanceLanguage: 'en',
+                order: 'relevance',
             },
         });
 
@@ -32,13 +37,17 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo |
                 title: items[0].snippet.title,
             };
         }
+        
         return null;
-    } catch (error) {
+    } catch (error: any) {
         if (axios.isAxiosError(error) && error.response) {
-            console.error('YouTube API Error:', error.response.data.error.message);
+            console.error('    YouTube API Error:', error.response.data?.error?.message);
+            if (error.response.status === 403) {
+                console.error('    ⚠️  YouTube API quota exceeded!');
+            }
         } else {
-            console.error('Error searching YouTube videos:', error);
+            console.error('    Error:', error.message);
         }
-        throw new Error('Failed to fetch video from YouTube.');
+        return null;
     }
 };
