@@ -1,0 +1,5 @@
+{
+  "name": "AI Course Builder",
+  "description": "An application that uses AI to generate comprehensive courses on any topic, complete with video lessons, notes, and quizzes.",
+  "requestFramePermissions": []
+}
