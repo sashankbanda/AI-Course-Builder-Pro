@@ -14,7 +14,8 @@ warnings.filterwarnings("ignore")
 # This script relies on FFMPEG being available in the system PATH.
 # We will use 'temp_audio' inside the backend folder for temporary files.
 os.makedirs(Path('temp_audio'), exist_ok=True)
-MODEL = "openai/whisper-large-v3"
+MODEL = "openai/whisper-base"
+# MODEL = "openai/whisper-large-v3"
 
 # --- Initialization: Load Model ---
 try:

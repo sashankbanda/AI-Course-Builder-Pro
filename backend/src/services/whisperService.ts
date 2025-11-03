@@ -1,9 +1,10 @@
+// backend/src/services/whisperService.ts
 import { spawn } from "child_process";
 import path from "path";
 // REMOVED: import play from "play-dl";
 // REMOVED: import OpenAI from "openai";
 // The previous code using play-dl and OpenAI is now obsolete.
-
+ 
 /**
  * Download audio from YouTube and transcribe using a local Python/Whisper-large-v3 script.
  * This utilizes a local GPU for highly performant, server-side transcription.
@@ -13,8 +14,14 @@ export async function transcribeAudioWithWhisper(videoId: string): Promise<strin
   const pythonScriptPath = path.join(__dirname, '../../whisper_transcriber.py');
 
   return new Promise((resolve) => {
-    // Use 'python3' for better compatibility across systems. Windows might require 'python'.
-    const pythonExecutable = path.join(process.cwd(), 'venv_whisper', 'Scripts', 'python.exe'); 
+    // START FIX
+    // Use OS-specific path for the virtual environment's Python executable
+    const isWindows = process.platform === 'win32';
+    const venvDir = isWindows ? 'venv_whisper/Scripts' : 'venv_whisper/bin';
+    const pythonExe = isWindows ? 'python.exe' : 'python3';
+    
+    const pythonExecutable = path.join(process.cwd(), venvDir, pythonExe); 
+    // END FIX
     
     // Command: python3 whisper_transcriber.py <videoUrl>
     const child = spawn(pythonExecutable, [pythonScriptPath, videoUrl], {
