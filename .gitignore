@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 backend/.env 
+
+# Python virtual environment
+backend/venv_whisper/

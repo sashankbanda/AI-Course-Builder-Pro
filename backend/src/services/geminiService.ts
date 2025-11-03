@@ -12,7 +12,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
  * Generate subtopics for a given topic using Gemini AI
  */
 export async function generateSubtopics(topic: string): Promise<string[]> {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const prompt = `Generate 3-5 essential subtopics for learning "${topic}" as a beginner.
 Return ONLY a comma-separated list of subtopic names. No numbers, no explanations.
@@ -32,7 +32,7 @@ Subtopics:`;
  * Convert video transcript into structured lesson notes using Gemini AI
  */
 export async function summarizeTranscript(transcript: string, subtopic: string): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     // Limit transcript to avoid token limits
     const limitedTranscript = transcript.substring(0, 15000);
@@ -64,7 +64,7 @@ LESSON NOTES:`;
  * Generate quiz questions from lesson notes using Gemini AI
  */
 export async function generateQuiz(notes: string, questionCount = 2): Promise<QuizQuestion[]> {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Create ${questionCount} multiple-choice quiz questions from these notes.
 

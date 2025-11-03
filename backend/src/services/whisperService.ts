@@ -14,7 +14,7 @@ export async function transcribeAudioWithWhisper(videoId: string): Promise<strin
 
   return new Promise((resolve) => {
     // Use 'python3' for better compatibility across systems. Windows might require 'python'.
-    const pythonExecutable = 'python3'; 
+    const pythonExecutable = path.join(process.cwd(), 'venv_whisper', 'Scripts', 'python.exe'); 
     
     // Command: python3 whisper_transcriber.py <videoUrl>
     const child = spawn(pythonExecutable, [pythonScriptPath, videoUrl], {
